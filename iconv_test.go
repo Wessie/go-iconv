@@ -69,13 +69,13 @@ func TestIconvReverse(t *testing.T) {
 func TestError(t *testing.T) {
 	_, err := Open("INVALID_ENCODING", "INVALID_ENCODING")
 	if err != syscall.EINVAL {
-		t.Errorf("Unexpected error: %#s (expected %#s)", err, syscall.EINVAL)
+		t.Errorf("Unexpected error: %s (expected %s)", err, syscall.EINVAL)
 	}
 
 	cd, _ := Open("ISO-8859-15", "UTF-8")
 	_, err = cd.Conv("\xc3a")
 	if err != syscall.EILSEQ {
-		t.Errorf("Unexpected error: %#s (expected %#s)", err, syscall.EILSEQ)
+		t.Errorf("Unexpected error: %s (expected %s)", err, syscall.EILSEQ)
 	}
 }
 

@@ -5,6 +5,7 @@ package iconv
 // #cgo darwin LDFLAGS: -liconv
 // #include <iconv.h>
 // #include <errno.h>
+// #include <stdlib.h>
 import "C"
 
 import (
@@ -22,8 +23,8 @@ type Iconv struct {
 
 // Create a codec which convert a string encoded in fromcode into a string
 // encoded in tocode
-// 
-// If you add //TRANSLIT at the end of tocode, any character which doesn't 
+//
+// If you add //TRANSLIT at the end of tocode, any character which doesn't
 // exists in the destination charset will be replaced by its closest
 // equivalent (for example, € will be represented by EUR in ASCII). Else,
 // such a character will trigger an error.
@@ -49,18 +50,22 @@ func (cd *Iconv) Conv(input string) (result string, err error) {
 		return "", nil
 	}
 
-	inbuf := []byte(input)
-	outbuf := make([]byte, bufSize)
-	inbytes := C.size_t(len(inbuf))
-	inptr := &inbuf[0]
+	inBuf := C.CString(input)
+	defer C.free(unsafe.Pointer(inBuf))
+	inBufN := C.size_t(len(input))
 
-	for inbytes > 0 {
-		outbytes := C.size_t(len(outbuf))
-		outptr := &outbuf[0]
+	outBufStart := C.malloc(bufSize)
+	defer C.free(outBufStart)
+	outBuf := (*C.char)(outBufStart)
+
+	for inBufN > 0 {
+		outBufN := C.size_t(bufSize)
+
 		_, err = C.iconv(cd.pointer,
-			(**C.char)(unsafe.Pointer(&inptr)), &inbytes,
-			(**C.char)(unsafe.Pointer(&outptr)), &outbytes)
-		buf.Write(outbuf[:len(outbuf)-int(outbytes)])
+			&inBuf, &inBufN,
+			&outBuf, &outBufN)
+
+		buf.Write(C.GoBytes(outBufStart, C.int(bufSize-outBufN)))
 		if err != nil && err != syscall.E2BIG {
 			return buf.String(), err
 		}
